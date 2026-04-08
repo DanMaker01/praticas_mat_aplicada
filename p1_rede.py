@@ -12,6 +12,8 @@ pygame.display.set_caption("Rede Hidráulica Interativa")
 font = pygame.font.SysFont("Arial", 14)
 clock = pygame.time.Clock()
 
+DEBUG = True
+
 # ============================
 # VARIÁVEIS GLOBAIS
 # ============================
@@ -228,16 +230,19 @@ def draw():
 
         pygame.draw.line(screen, color, (x1,y1), (x2,y2), thickness)
 
-        if k < len(q):
-            mx, my = (x1 + x2) // 2, (y1 + y2) // 2
-            dx, dy = x2 - x1, y2 - y1
-            L = max(1, (dx**2 + dy**2)**0.5)
-            nx, ny = -dy / L, dx / L
-            offset = 12
-            tx, ty = int(mx + nx*offset), int(my + ny*offset)
-            screen.blit(font.render(f"R={R[k]:.2f} q={q[k]:.2f}", True, (255,255,255)), (tx, ty))
+        if DEBUG:
+            if k < len(q):
+                mx, my = (x1 + x2) // 2, (y1 + y2) // 2
+                dx, dy = x2 - x1, y2 - y1
+                L = max(1, (dx**2 + dy**2)**0.5)
+                nx, ny = -dy / L, dx / L
+                offset = 12
+                tx, ty = int(mx + nx*offset), int(my + ny*offset)
+                screen.blit(font.render(f"R={R[k]:.2f} q={q[k]:.2f}", True, (255,255,255)), (tx, ty))
 
     draw_flow_particles(q)
+
+    
 
     for i, n in enumerate(nodes):
         x, y = n["pos"]
@@ -246,7 +251,8 @@ def draw():
             color = (255,255,0)
         pygame.draw.circle(screen, color, (x,y), 6)
         pressure = p[i] if i < len(p) else 0
-        screen.blit(font.render(f"{i}:Q={Q[i]:.1f} p={pressure:.2f}", True, (255,255,255)), (x+10,y))
+        if DEBUG:
+            screen.blit(font.render(f"{i}:Q={Q[i]:.1f} p={pressure:.2f}", True, (255,255,255)), (x+10,y))
         if i in pressao_atm:
             pygame.draw.circle(screen, (0,255,0), (x,y), 16,2)
 
