@@ -1,6 +1,6 @@
 # Instruções
 
-Para executar os código é necessário instalar as seguintes bibliotecas:
+Para executar os códigos é necessário instalar as seguintes bibliotecas:
 
 ```
 pip install numpy
