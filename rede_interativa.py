@@ -1,3 +1,5 @@
+# implementar a vazão de saída, que não é calculada diretamente pelo sistema
+
 import pygame
 import numpy as np
 import scipy.sparse as sp
@@ -12,7 +14,7 @@ pygame.display.set_caption("Rede Hidráulica Interativa")
 font = pygame.font.SysFont("Arial", 14)
 clock = pygame.time.Clock()
 
-DEBUG = True
+DEBUG = False
 
 # ============================
 # VARIÁVEIS GLOBAIS
@@ -97,6 +99,28 @@ Qin_min, Qin_max = 5, 20
 x_min, x_max = 100, 900
 y_min, y_max = 100, 500
 NUM_PARTICLES = 5
+
+def gerar_rede_1():
+    global nodes, edges, R, Q, pressao_atm, flow_particles
+
+    num_nos = 0
+    nodes = []
+    nos = list(range(num_nos))
+    arestas = set()
+    edges = list(arestas)
+    R = [1 for _ in edges]
+    Q = [0]*num_nos
+    Qin = 10
+    pressao_atm = []
+
+
+    flow_particles = [[p/NUM_PARTICLES for p in range(NUM_PARTICLES)] for _ in edges]
+
+def adicionar_ruido(R,alfa,chance_mudanca=0.1):
+    for k in range(len(edges)):
+        if random.uniform(0,1) < chance_mudanca:
+            R[k] *= alfa
+
 
 def gerar_rede_aleatoria():
     global nodes, edges, R, Q, pressao_atm, flow_particles
@@ -203,8 +227,55 @@ def draw_flow_particles(q):
 
             # Desenha se a posição for válida e estiver dentro da tela
             if np.isfinite(pos).all() and 0 <= pos[0] <= WIDTH and 0 <= pos[1] <= HEIGHT:
-                color = (0, 150, 255) if q[k] >= 0 else (255, 100, 100)
+                color = (0, 255, 255) if q[k] >= 0 else (255, 100, 100)
                 pygame.draw.circle(screen, color, pos.astype(int), 4)
+
+def draw_debug_info(q, p):
+    """Desenha informações de debug no canto superior esquerdo"""
+    y_offset = 30
+    
+    # Título do debug
+    title = font.render("=== DEBUG MODE ===", True, (255, 255, 0))
+    screen.blit(title, (10, 10))
+    
+    # Informações das vazões
+    y_offset += 5
+    flow_title = font.render("Vazões:", True, (200, 200, 255))
+    screen.blit(flow_title, (10, y_offset))
+    y_offset += 20
+    
+    for k, (i, j) in enumerate(edges):
+        if k < len(q):
+            flow_text = f"  {i}->{j}: q={q[k]:.2f}, R={R[k]:.2f}"
+            text = font.render(flow_text, True, (200, 200, 200))
+            screen.blit(text, (10, y_offset))
+            y_offset += 18
+    
+    # Lista de teclas e funções
+    y_offset += 10
+    keys_title = font.render("Teclas:", True, (200, 200, 255))
+    screen.blit(keys_title, (10, y_offset))
+    y_offset += 20
+    
+    commands = [
+        ("TAB", "Toggle debug"),
+        ("N", "Nova rede aleatória"),
+        ("T", "Adicionar ruído global"),
+        ("Clique Esq", "Selecionar/Criar nó"),
+        ("Clique Dir", "Criar aresta"),
+        ("Shift+Clique", "Toggle pressão atm (nó)"),
+        ("Arrastar", "Mover nó selecionado"),
+        ("Q/A", "Aumentar/Diminuir Q (nó selecionado)"),
+        ("R/F", "Aumentar/Diminuir R (aresta selecionada)"),
+        ("DELETE", "Remover nó/aresta selecionada"),
+        ("P", "Resetar partículas (nó selecionado)"),
+    ]
+    
+    for key, desc in commands:
+        text = font.render(f"{key}: {desc}", True, (180, 180, 180))
+        screen.blit(text, (10, y_offset))
+        y_offset += 18
+
 
 def draw():
     screen.fill((20,20,30))
@@ -242,8 +313,6 @@ def draw():
 
     draw_flow_particles(q)
 
-    
-
     for i, n in enumerate(nodes):
         x, y = n["pos"]
         color = (100,100,255)
@@ -255,6 +324,14 @@ def draw():
             screen.blit(font.render(f"{i}:Q={Q[i]:.1f} p={pressure:.2f}", True, (255,255,255)), (x+10,y))
         if i in pressao_atm:
             pygame.draw.circle(screen, (0,255,0), (x,y), 16,2)
+
+    # Mostra linha "TAB:debug" quando debug está desativado
+    if not DEBUG:
+        debug_text = font.render("TAB:debug", True, (150, 150, 150))
+        screen.blit(debug_text, (10, 10))
+    else:
+        # Mostra informações completas de debug
+        draw_debug_info(q, p)
 
     if creating_edge is not None:
         pygame.draw.line(screen, (255,255,0), nodes[creating_edge]["pos"], pygame.mouse.get_pos(), 2)
@@ -300,7 +377,8 @@ def remove_edge(k):
 # ============================
 # LOOP PRINCIPAL
 # ============================
-gerar_rede_aleatoria()
+# gerar_rede_aleatoria()
+gerar_rede_1()
 running = True
 
 while running:
@@ -360,6 +438,10 @@ while running:
                 nodes[selected_node]["pos"] = mouse_pos
 
         if event.type == pygame.KEYDOWN:
+            # Toggle debug com TAB
+            if event.key == pygame.K_TAB:
+                DEBUG = not DEBUG
+            
             # nós
             if selected_node is not None:
                 if event.key == pygame.K_q:
@@ -383,12 +465,18 @@ while running:
                     remove_edge(selected_edge)
                     selected_edge = None
 
-            # gerar rede aleatória
-            if event.key == pygame.K_n:
-                gerar_rede_aleatoria()
-                selected_node = None
-                selected_edge = None
-                creating_edge = None
+            # teclas globais (sem seleção)
+            else:
+                # gerar rede aleatória
+                if event.key == pygame.K_n:
+                    gerar_rede_aleatoria()
+                    selected_node = None
+                    selected_edge = None
+                    creating_edge = None
+                # adicionar ruído global (tecla T, por exemplo)
+                elif event.key == pygame.K_t:
+                    alfa = 100.0
+                    adicionar_ruido(R, alfa)
 
     # Antes de desenhar, sanitiza posições dos nós (evita nan)
     sanitize_nodes()
