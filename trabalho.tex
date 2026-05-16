@@ -1,0 +1,731 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{todonotes} % temporario
+\usepackage{amssymb} % para usar \mathbb{R}
+
+\begin{document}
+
+\section{Introdução}
+
+\par O estudo de redes constitui um problema clássico em diversas áreas da engenharia, física e matemática aplicada. Neste contexto, considera-se uma rede hidráulica composta por nós e arestas, na qual cada aresta possui uma resistência hidráulica associada e cada nó pode atuar como fonte, sumidouro ou ponto de pressão conhecida.
+
+No problema direto abordado neste trabalho, assume-se que uma vazão $Q_{in}$ é injetada em um ou mais nós da rede, enquanto outros nós estão submetidos a uma condição de contorno de pressão conhecida, tipicamente a pressão atmosférica. O objetivo consiste em determinar as pressões em todos os nós e as vazões em todas as arestas, a partir das leis de conservação de massa e das relações constitutivas que governam o escoamento.
+
+Além das variáveis primárias do problema, também são de interesse diversas grandezas derivadas que caracterizam o comportamento global da rede, tais como a resistência hidráulica equivalente, a potência necessária para sustentar o escoamento imposto e métricas de eficiência associadas à dissipação de energia no sistema.
+
+A resolução eficiente deste problema requer a formulação de um sistema linear que represente o balanço de fluxos nos nós e as relações entre pressões e vazões nas arestas. Neste trabalho, tal sistema é construído utilizando uma abordagem matricial baseada em operadores de incidência e condutância, resultando em um sistema esparso que pode ser resolvido de forma computacionalmente eficiente.
+
+Para fins de análise e visualização, foi desenvolvida uma ferramenta computacional interativa em Python, utilizando as bibliotecas \texttt{NumPy}, \texttt{SciPy} e \texttt{Pygame}. Essa ferramenta permite a geração automática de redes aleatórias, bem como a manipulação direta de nós e arestas, possibilitando a exploração dinâmica do comportamento do sistema.
+
+\section{Desenvolvimento}
+
+\subsection{Problema 1}
+\indent\indent Suponha que à rede seja injetada uma vazão $Q_{in}$ em um ou mais pontos, enquanto outros nós estejam submetidos à pressão atmosférica.
+O problema consiste em determinar: 
+\begin{itemize}
+    \item as vazões em cada aresta;
+    \item as pressões em cada nó;
+    \item a resistência hidráulica equivalente da rede;
+    \item a potência necessária para injetar a vazão $Q_{in}$;
+    \item outras métricas globais do sistema. 
+\end{itemize}
+
+\subsubsection{Formulação Matemática Método Direto}
+\indent\indent Dado um grafo $G$, em que $V$ é o conjunto de nós da rede e $A$ é o conjunto de arestas (canos) conectando os nós:
+
+\[
+G = (V, A), \quad |V| = n, \quad |A| = m
+\]
+
+O grafo $G$ se torna uma rede se estiver munido de duas regras adicionais:
+
+\begin{equation}
+\sum_{k \in \delta(j)} q_k = Q_j, \quad j = 1, ..., n
+\label{eq:lei_constitutiva}
+\end{equation}
+
+(Lei de constituição)
+
+\todo{colocar os nomes das leis ao lado}
+
+
+\begin{equation}
+q_k = \frac{1}{R_k} \, (p_i - p_j), \quad k=(i,j) \in A
+\label{eq:lei_balanco}
+\end{equation}
+(Lei de equilíbrio)
+
+Onde:
+
+\[
+ p \in \mathbb{R}^n, \quad
+p =
+\begin{bmatrix}
+p_1 \\
+p_2 \\
+\vdots \\
+p_n
+\end{bmatrix}
+\]
+
+\[
+q \in \mathbb{R}^m, \quad
+q =
+\begin{bmatrix}
+q_1 \\
+q_2 \\
+\vdots \\
+q_m
+\end{bmatrix}
+\]
+
+\[
+Q \in \mathbb{R}^n, \quad
+Q =
+\begin{bmatrix}
+Q_1 \\
+Q_2 \\
+\vdots \\
+Q_n
+\end{bmatrix}
+\]
+
+\begin{itemize}
+    \item $p_i$ é a pressão no vértice $i$, variável dependente;
+    
+    \item $q_k$ é a vazão na aresta $k$, variável dependente; 
+
+    \item $Q_i$ é a vazão no vértice $i$. e $Q_{in}$ é a vazão que entra no sistema; 
+    
+    \item $\delta(j) = \{ k \in A \mid k \text{ é incidente ao nó } j \}$;
+    
+    %\item $a_{ij} = 1$, se vértice $i$ está ligado ao $j$, senão $0$. 
+
+    \item $R_k$ é a resistência ao fluxo, na aresta $k$. $R_k >0$
+
+    %\item $Q_{in}$ é a vazão de entrada
+\end{itemize}
+
+Deste modo, as equações constitutivas \eqref{eq:lei_constitutiva} e de balanço nodal \eqref{eq:lei_balanco} formam o seguinte sistema de equações:
+
+\begin{equation}
+\left\{
+\begin{aligned}
+    \sum_{k \in \delta(1)} q_k &= Q_1 \\
+    &\vdots \\
+    \sum_{k \in \delta(n)} q_k &= Q_n \\
+    q_1 - \frac{1}{R_1}(p_{i_1} - p_{j_1}) &= 0 \\
+    &\vdots \\
+    q_m - \frac{1}{R_m}(p_{i_m} - p_{j_m}) &= 0
+\end{aligned}
+\right.
+\label{eq:sistema}
+\end{equation}
+
+Observa-se que o sistema é composto por \(m+n\) equações e \(m+n\) incógnitas, sendo \(q_k\) as vazões nos ramos da rede e \(p_i\) as pressões nos nós. Dessa forma, o sistema \eqref{eq:sistema} pode ser reescrito de forma compacta na forma matricial
+
+\[
+Zx = b,
+\]
+
+onde o vetor de incógnitas é definido por
+
+\[
+x =
+\begin{bmatrix}
+q_1 \\
+\vdots \\
+q_m \\
+p_1 \\
+\vdots \\
+p_n
+\end{bmatrix},
+\quad
+x \in \mathbb{R}^{m+n},
+\]
+
+e o vetor de termos independentes é dado por
+
+\[
+b =
+\begin{bmatrix}
+Q_1 \\
+\vdots \\
+Q_n \\
+0 \\
+\vdots \\
+0
+\end{bmatrix},
+\quad
+b \in \mathbb{R}^{m+n}.
+\]
+
+A matriz de coeficientes \(Z\) pode ser estruturada em blocos da seguinte forma:
+
+\[
+Z =
+\begin{bmatrix}
+C & \textbf{0} \\
+I & D
+\end{bmatrix}_ {(m+n)\times (m+n)}.
+\]
+
+
+O bloco \(C \in \mathbb{R}^{n \times m}\) corresponde às equações de balanço nodal e depende apenas da estrutura do grafo que representa a rede. Seus elementos assumem valores \(0\) ou \(1\), indicando se um determinado ramo incide em um dado nó.
+
+O bloco superior direito é uma matriz nula \(0_{n \times n}\), pois as equações de balanço nodal não dependem diretamente das pressões nos nós.
+
+O bloco inferior esquerdo é a matriz identidade \(I_m\), uma vez que cada equação constitutiva possui coeficiente unitário associado à vazão \(q_k\).
+
+Por fim, o bloco \(D \in \mathbb{R}^{m \times n}\) contém os coeficientes associados às pressões nas equações constitutivas. Esses coeficientes dependem tanto da estrutura do grafo quanto das resistências hidráulicas \(R_k\) de cada ramo, sendo compostos por termos da forma \(\pm \frac{1}{R_k}\) associados aos nós conectados pelo ramo \(k\).
+
+Assim, o sistema completo pode ser representado como
+
+\[
+\begin{bmatrix}
+C & \textbf{0} \\
+I & D
+\end{bmatrix}
+\begin{bmatrix}
+q \\
+p
+\end{bmatrix}
+=
+\begin{bmatrix}
+Q \\
+0
+\end{bmatrix}.
+\]
+
+Além disso, para o problema admitir solução única, é necessário que $\det Z \neq 0$, pois senão o sistema poderá ser singular, o que não é desejado. 
+
+Para garantir a não-singularidade, é necessário fixar uma pressão atmosférica em algum vértice, garantindo uma solução para o problema, o que é feito modificando os blocos de matriz $C$ e $\textbf{0}$, superiores à matriz $Z$. 
+
+Para isso, se fixada pressão atmosférica ("cano furado") no vértice $i$ então toda a linha $i$ de $C$ será definida como 0, obtemos assim a matriz $C_{mod}$. Além disso a matriz $\textbf{0}$ recebe 1 na posição diagonal $(i,i)$, tornando-se $\textbf{0}_{mod}$. 
+
+Então em sua forma final:
+
+
+\[
+\begin{bmatrix}
+C_{mod} & \textbf{0}_{mod} \\
+I & D
+\end{bmatrix}
+\begin{bmatrix}
+q \\
+p
+\end{bmatrix}
+=
+\begin{bmatrix}
+Q \\
+0
+\end{bmatrix}.
+\]
+
+
+
+% A partir desse sistema, é possível reescrevê-lo como matriz da seguinte forma:
+
+% Definindo o vetor de incógnitas
+
+% \[
+% x =
+% \begin{bmatrix}
+% q_1 \\
+% \vdots \\
+% q_m \\
+% p_1 \\
+% \vdots \\
+% p_n
+% \end{bmatrix},
+% x \in \mathbb{R}^{m+n}
+% \]
+
+% e o vetor de resultado
+% \[
+% b =
+% \begin{bmatrix}
+% Q_1 \\
+% \vdots \\
+% Q_n \\
+% 0 \\
+% \vdots \\
+% 0
+% \end{bmatrix},
+% b \in \mathbb{R}^{m+n}
+% \]
+
+
+
+% tem-se
+
+%\[
+% \begin{bmatrix}
+% 1 & 0 & 0 \\
+% -1 & 0 & 0 \\
+% 1 & -\frac{1}{R_1} & \frac{1}{R_1}
+% \end{bmatrix}
+% \begin{bmatrix}
+% q_1 \\
+% p_1 \\
+% p_2
+% \end{bmatrix}
+% =
+% \begin{bmatrix}
+% Q_1 \\
+% Q_2 \\
+% 0
+% \end{bmatrix}.
+% \]
+
+
+\paragraph{Resistência Hidráulica Equivalente da Rede}
+A resistência hidráulica equivalente representa o quanto a rede dificulta o escoamento do fluido. Esse valor pode ser obtido a partir da razão entre a diferença de pressão nos extremos da rede e a vazão de entrada no sistema.
+
+\begin{equation}
+R_{eq} = \frac{p_1 - p_n}{Q_{in}}
+\label{eq:Req}
+\end{equation}
+
+onde $Q_{in}$ é a vazão de entrada, $p_n$ é a pressão no último ponto da rede, e $p_1$ é a pressão no ponto de entrada. Fisicamente, $R_{eq}$ corresponde à resistência de um único tubo equivalente que produziria a mesma queda de pressão para a vazão $Q_{in}$ que toda a rede original.
+
+\paragraph{Potência necessária para injetar a vazão de entrada} 
+A potência hidráulica necessária para injetar a vazão $Q_{in}$ ao longo de toda a rede é equivalente à energia total dissipada nos tubos do sistema, associada às perdas de pressão em cada trecho da tubulação. Essa potência pode ser expressa por:
+
+\begin{equation}
+    P_{\text{in}} = \sum_{k} q_k \cdot \Delta p_k
+\end{equation}
+
+onde $k$ representa uma aresta, $q_k$ é a vazão que escoa pela aresta $k$, e $\Delta p_k$ é a diferença de pressão entre as extremidades dessa aresta. 
+
+\par O método é dito direto pois é montada apenas um sistema de matrizes para encontrar a solução
+
+\paragraph{Pré Processamento e Assimilação de Dados}
+
+
+Após a formulação matemática, é necessário instanciar
+valores concretos para os parâmetros da rede e preparar os dados que
+serão utilizados na resolução computacional.
+
+Inicialmente, define-se o formato da rede a partir do grafo $G$, especificando quais pares
+de vértices estão conectados por arestas. 
+
+Para cada aresta $k \in A$ atribui-se um valor de resistência $R_k$.
+
+Também são definidos os valores das vazões nodais $Q_i$.
+
+Nós que recebem injeção de fluido possuem $Q_i>0$, enquanto nós de
+descarga possuem $Q_i<0$. Nós internos da rede satisfazem $Q_i=0$, pois tudo que entra, sai.
+A vazão total injetada no sistema é denotada por $Q_{in}$.
+
+Utilizaremos a pressão atmosférica como referência para o sistema,
+fixando $p_{atm} = 0$.
+
+Com essas informações, é possível construir o sistema linear que
+determina as pressões da rede. Em sua forma simples:
+
+\[
+Zx = b ,
+\]
+
+no qual a matriz $Z$ depende apenas da topologia da rede e dos valores
+das resistências $R_k$. A partir da solução desse sistema, obtêm-se as
+pressões nodais e, posteriormente, as vazões em cada aresta por meio
+da lei constitutiva.
+
+Após a construção do sistema, é necessário verificar se o problema é bem-posto (Hadamard), ou seja, se este tem solução e essa solução é única. Para isso, é necessário que ocorra  $det(Z)\neq0$.
+
+
+\subsubsection{Formulação Matemática Método de Duas Etapas}
+
+Uma abordagem alternativa à formulação matricial acoplada consiste no método do qual as \textbf{vazões nos ramos são determinadas
+antes do cálculo das pressões nodais}. Essa técnica baseia-se na aplicação simultânea da conservação de massa nos nós e da conservação de energia nos ciclos independentes do grafo.
+
+Inicialmente, escolhe-se um conjunto de vazões iniciais $q \in \mathbb{R}^m$
+que satisfaça a equação de continuidade nodal
+
+\begin{equation}
+C\,q = Q,
+\end{equation}
+
+onde $C \in \mathbb{R}^{n \times m}$ é a matriz de incidência nó--aresta
+e $Q \in \mathbb{R}^n$ representa as vazões impostas nos nós.
+
+Em seguida, em vez de escrever equações nos nós, escrevem-se equações
+nos \textbf{laços independentes} da rede. Seja $B \in \mathbb{R}^{\ell \times m}$
+a \textbf{matriz de laços} (ou matriz ciclo--aresta), onde $\ell = m-n+1$
+é o número de ciclos independentes do grafo. Cada linha de $B$ indica,
+com sinais $\pm 1$, quais arestas pertencem a um determinado laço e
+o respectivo sentido de percurso.
+
+A conservação de energia em cada laço impõe que a soma das perdas de
+pressão ao longo do ciclo seja nula, resultando em
+
+\begin{equation}
+B\,h = 0,
+\end{equation}
+
+onde $h \in \mathbb{R}^m$ é o vetor de perdas de carga nas arestas,
+definido por
+
+\begin{equation}
+h = R\,q,
+\end{equation}
+
+sendo $R \in \mathbb{R}^{m \times m}$ a matriz diagonal das resistências
+hidráulicas,
+
+\[
+R =
+\begin{bmatrix}
+R_1 & 0 & \cdots & 0 \\
+0 & R_2 & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & R_m
+\end{bmatrix}.
+\]
+
+Assim, as equações dos laços podem ser escritas de forma compacta como
+
+\begin{equation}
+B\,R\,q = 0.
+\end{equation}
+
+O método procede então de forma iterativa, aplicando correções às vazões
+de modo a satisfazer essas equações, sem a necessidade de montar um
+grande sistema linear acoplado.
+
+Após a convergência das vazões, as pressões nodais são obtidas por
+integração direta das quedas de pressão ao longo das arestas. Fixando-se
+a pressão em um nó de referência $p_{\text{ref}} = 0$, as demais pressões
+podem ser calculadas por
+
+\begin{equation}
+p_j = p_i - R_k\,q_k,
+\quad \text{para cada aresta } k = (i,j).
+\end{equation}
+
+Dessa forma, diferentemente da formulação matricial global, o método
+dos laços resolve inicialmente apenas as vazões, utilizando um número de
+equações igual ao número de ciclos independentes da rede,
+$\ell = m-n+1$, que é significativamente menor que $m+n$ em redes
+de grande porte. Isso torna essa abordagem particularmente eficiente
+para redes extensas e esparsas.
+
+
+\subsection{Problema 2}
+
+Considere a mesma rede hidráulica do Problema Determinístico,
+representada por um grafo \( G=(V,A) \), com \( |V|=n \) nós e \( |A|=m \) arestas.
+No caso determinístico, cada aresta \(k\) possui resistência hidráulica fixa \(R_k\).
+Neste novo cenário, admite-se que cada cano da rede pode estar parcialmente obstruído
+com probabilidade \(r\), o que multiplica sua resistência por um fator \(\alpha>1\).
+
+Para modelar essa incerteza, define-se, para cada aresta \(k\), a variável aleatória discreta
+\[
+\xi_k =
+\begin{cases}
+1, & \text{com probabilidade } 1-r, \\[6pt]
+\alpha, & \text{com probabilidade } r.
+\end{cases}
+\]
+
+A resistência hidráulica passa a ser uma variável aleatória
+\[
+\widetilde{R}_k = \xi_k R_k.
+\]
+
+Logo, a matriz diagonal das resistências da rede torna-se
+\[
+\widetilde{R} =
+\begin{bmatrix}
+\widetilde{R}_1 & 0 & \cdots & 0 \\
+0 & \widetilde{R}_2 & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & \widetilde{R}_m
+\end{bmatrix}.
+\]
+
+\subsubsection{Formulação Matemática}
+
+Seja \(C \in \mathbb{R}^{n \times m}\) a matriz de incidência nó–aresta da rede.
+A relação entre vazões nas arestas \(q \in \mathbb{R}^m\) e pressões nodais
+\(p \in \mathbb{R}^n\) é dada por
+\[
+q = D(\widetilde{R})\, C^T p,
+\]
+onde
+\[
+D(\widetilde{R}) =
+\begin{bmatrix}
+\frac{1}{\widetilde{R}_1} & 0 & \cdots & 0 \\
+0 & \frac{1}{\widetilde{R}_2} & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & \frac{1}{\widetilde{R}_m}
+\end{bmatrix}.
+\]
+
+A conservação de massa nos nós impõe
+\[
+C q = Q,
+\]
+onde \(Q \in \mathbb{R}^n\) é o vetor de vazões injetadas/retiradas.
+
+Substituindo a expressão de \(q\), obtém-se o sistema reduzido
+em termos apenas das pressões nodais:
+\[
+C\, D(\widetilde{R})\, C^T\, p = Q.
+\]
+
+Define-se então a matriz Laplaciana hidráulica aleatória
+\[
+L(\widetilde{R}) = C\, D(\widetilde{R})\, C^T.
+\]
+
+O sistema a ser resolvido passa a ser
+\[
+L(\widetilde{R})\, p = Q.
+\]
+
+Como \(\widetilde{R}\) depende das variáveis aleatórias \(\xi_k\),
+a matriz \(L\) é aleatória e, consequentemente,
+o vetor de pressões
+\[
+p = p(\xi_1,\xi_2,\dots,\xi_m)
+\]
+também é uma variável aleatória vetorial.
+
+O objetivo do problema é determinar
+\[
+\mathbb{P}\!\left(\max_{i=1,\dots,n} p_i > P_{\max}\right),
+\]
+isto é, a probabilidade de que a pressão em algum nó ultrapasse
+o valor máximo admissível.
+
+\subsubsection{Método de Monte Carlo}
+
+Como cada aresta possui dois estados possíveis,
+o número total de configurações da rede é \(2^m\),
+o que inviabiliza uma análise exata para redes reais.
+
+Utiliza-se então o Método de Monte Carlo, baseado em amostragem aleatória:
+
+\begin{enumerate}
+\item Para \(s = 1, \dots, N\), gera-se uma amostra independente
+\(\{\xi_k^{(s)}\}_{k=1}^m\).
+
+\item Para cada amostra, monta-se a matriz
+\(\widetilde{R}^{(s)}\), a matriz
+\(D(\widetilde{R}^{(s)})\) e a Laplaciana
+\[
+L^{(s)} = C\, D(\widetilde{R}^{(s)})\, C^T.
+\]
+
+\item Resolve-se o sistema linear
+\[
+L^{(s)} p^{(s)} = Q.
+\]
+
+\item Verifica-se a condição de falha
+\[
+I^{(s)} =
+\begin{cases}
+1, & \text{se } \max_i p_i^{(s)} > P_{\max}, \\
+0, & \text{caso contrário.}
+\end{cases}
+\]
+\end{enumerate}
+
+A probabilidade procurada é estimada por
+\[
+\mathbb{P}\!\left(\max_i p_i > P_{\max}\right)
+\approx
+\frac{1}{N} \sum_{s=1}^{N} I^{(s)}.
+\]
+
+O problema transforma a análise hidráulica da rede em um problema
+de propagação de incertezas em sistemas lineares dependentes de parâmetros
+aleatórios. A obstrução de canos altera as resistências, modifica a
+distribuição de vazões e pode provocar acúmulo de pressão em determinados nós.
+
+A formulação reduzida em pressões nodais é essencial para tornar viável
+a simulação repetida do sistema, já que o método exige a resolução de
+centenas ou milhares de sistemas lineares.
+
+Essa abordagem caracteriza um estudo de confiabilidade da rede hidráulica,
+permitindo quantificar o risco de violação dos limites operacionais
+de pressão devido a falhas aleatórias nas arestas.
+
+
+
+
+% \subsubsection{Métodos e Implementação Computacional}
+
+% linguagem: python
+
+
+% montagem matriz
+
+
+% método de solução: cholesky, L*U, etc
+
+
+
+% --
+
+% \subsubsection{Pós-Processamento e Análise de Resultados}
+
+
+% \subsubsection{Variáveis Dependentes}
+
+% \begin{itemize}
+%     \item Vazão nas arestas
+%     \item Pressão em cada nó
+%     \item Potência hidráulica ($R_{eq}$): $R_{eq} = \frac{P_0 - P_{in}}{Q_{in}}$, informação da rede
+%     \item Diâmetro do cano
+%     \item Densidade/viscosidade do líquido
+%     \item Temperatura do líquido
+%     \item $R_{eq}$
+% \end{itemize}
+ 
+% \subsubsection{Condições de Contorno}
+
+% \begin{itemize}
+%     \item Pressão atmosférica fixa $p_a$
+% \end{itemize}
+
+
+\section{Método de Monte Carlo}
+
+O método de Monte Carlo é uma técnica numérica baseada em amostragem aleatória para estimar quantidades de interesse em problemas determinísticos ou estocásticos. A ideia central consiste em modelar as incertezas do sistema por meio de variáveis aleatórias, gerar diversas realizações independentes dessas variáveis e, para cada realização, calcular a grandeza de interesse. A média dos resultados obtidos converge para o valor esperado da variável analisada.
+
+No presente problema, cada aresta da rede pode sofrer um entupimento com probabilidade \(p\). Quando isso ocorre, a resistência hidráulica da aresta é multiplicada por um fator \(\alpha > 1\). Assim, para cada simulação, gera-se um vetor aleatório de resistências
+\[
+R^{(k)} = \left(R_1^{(k)}, R_2^{(k)}, \dots, R_m^{(k)}\right),
+\]
+onde
+\[
+R_i^{(k)} =
+\begin{cases}
+\alpha R_i, & \text{com probabilidade } p,\\
+R_i, & \text{com probabilidade } 1-p.
+\end{cases}
+\]
+
+Para cada realização \(R^{(k)}\), resolve-se o sistema linear da rede e obtêm-se as pressões nos nós,
+\[
+p^{(k)} = \left(p_1^{(k)}, p_2^{(k)}, \dots, p_n^{(k)}\right).
+\]
+Em seguida, calcula-se a pressão máxima
+\[
+P_{\max}^{(k)} = \max_i p_i^{(k)}.
+\]
+
+Sejam \(N\) simulações independentes. A média amostral
+\[
+\overline{P}_{\max}
+=
+\frac{1}{N}
+\sum_{k=1}^{N}
+P_{\max}^{(k)}
+\]
+é um estimador do valor esperado \(\mathbb{E}[P_{\max}]\).
+
+De modo análogo, a probabilidade de a pressão máxima ultrapassar um limite \(L\) pode ser estimada por
+\[
+\widehat{P}
+=
+\frac{1}{N}
+\sum_{k=1}^{N}
+\mathbf{1}\!\left(P_{\max}^{(k)} > L\right),
+\]
+onde \(\mathbf{1}(\cdot)\) é a função indicadora.
+
+\section{Erro do Método de Monte Carlo}
+
+O método de Monte Carlo possui convergência assintótica governada pela Lei dos Grandes Números e pelo Teorema Central do Limite. O erro estatístico da média amostral é proporcional a
+\[
+\mathcal{O}\!\left(\frac{1}{\sqrt{N}}\right).
+\]
+
+Mais precisamente, se \(\sigma^2\) é a variância da variável aleatória de interesse, então o erro padrão da média é
+\[
+\text{EP}
+=
+\frac{\sigma}{\sqrt{N}}.
+\]
+
+No caso da estimativa de uma probabilidade, o erro padrão é dado por
+\[
+\text{EP}
+=
+\sqrt{
+\frac{\widehat{P}(1-\widehat{P})}{N}
+}.
+\]
+
+Um intervalo de confiança aproximado de \(95\%\) pode ser construído por
+\[
+\widehat{P}
+\pm
+1.96\,\text{EP}.
+\]
+
+Portanto, para reduzir o erro pela metade, é necessário quadruplicar o número de simulações. Essa característica é uma propriedade fundamental do método de Monte Carlo.
+
+\section{Aplicação ao Problema da Rede}
+
+No código implementado, cada simulação é composta pelas seguintes etapas:
+
+\begin{enumerate}
+    \item Geração aleatória de um novo conjunto de resistências, simulando entupimentos;
+    \item Construção das matrizes da rede;
+    \item Resolução do sistema linear esparso;
+    \item Cálculo da pressão máxima;
+    \item Verificação se a pressão máxima excede o limite admissível.
+\end{enumerate}
+
+Esse procedimento é repetido \(N=1000\) vezes em cada bloco de simulação. Ao final de cada bloco, são calculadas estatísticas como:
+
+\begin{itemize}
+    \item pressão máxima observada;
+    \item pressão média;
+    \item probabilidade estimada de exceder o limite.
+\end{itemize}
+
+O processo completo é repetido em vários blocos independentes, permitindo avaliar a estabilidade das estimativas e quantificar a variabilidade entre execuções.
+
+\section{Pseudocódigo do Algoritmo}
+
+\begin{verbatim}
+Entrada:
+    Rede base
+    Resistências R
+    Probabilidade de entupimento p
+    Fator de aumento alpha
+    Limite de pressão L
+    Número de simulações N
+
+Para k = 1 até N:
+    Gerar R^(k) aleatoriamente
+    Resolver a rede com R^(k)
+    Calcular Pmax^(k)
+
+    Se Pmax^(k) > L:
+        contador = contador + 1
+
+Fim
+
+Estimativa da pressão máxima média:
+    media = média(Pmax^(1), ..., Pmax^(N))
+
+Estimativa da probabilidade:
+    prob = contador / N
+\end{verbatim}
+
+\section{Conclusão}
+
+O método de Monte Carlo é adequado para analisar redes sujeitas a incertezas aleatórias, como entupimentos probabilísticos em condutos. Sua implementação permite estimar tanto o valor esperado da pressão máxima quanto a probabilidade de ocorrência de sobrepressões acima de um limite especificado. A precisão das estimativas aumenta com o número de simulações, com erro decrescendo proporcionalmente a \(1/\sqrt{N}\).
+
+\end{document}
