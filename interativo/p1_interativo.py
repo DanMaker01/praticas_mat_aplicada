@@ -491,9 +491,9 @@ while running:
             # arestas
             elif selected_edge is not None:
                 if event.key == pygame.K_r:
-                    R[selected_edge] += 0.5
+                    R[selected_edge] += 0.1
                 elif event.key == pygame.K_f:
-                    R[selected_edge] = max(0.1, R[selected_edge] - 0.5)
+                    R[selected_edge] = max(0.01, R[selected_edge] - 0.1)
                 elif event.key == pygame.K_DELETE:
                     remove_edge(selected_edge)
                     selected_edge = None

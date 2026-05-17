@@ -4,7 +4,6 @@ $$
 Zx=b
 $$
 
-
 ## Instruções
 
 Para executar os códigos é necessário instalar as seguintes bibliotecas:
@@ -48,6 +47,9 @@ queremos:
 
 min SOMA ( | pi - pj | )
 
-sujeito a poder a posição dos canos e
+sujeito a poder a posição dos canos
 
-algo mais? (inteira? combinatória?)
+
+Resolver com:
+Inteira?
+Heurística?
