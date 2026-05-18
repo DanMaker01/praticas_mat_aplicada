@@ -38,18 +38,13 @@ queremos:
 
 suponha:
 
+$$
+T: \text{qtd de canos baixa-resistência disponíveis}
+$$
+
 ```
-QTD_CANOS_BAIXA_RESIST = 2
-BAIXA_RESIST = 0.1
+T = 2
+BAIXA_RESIST = 0.01
 ```
 
-queremos:
-
-min SOMA ( | pi - pj | )
-
-sujeito a poder a posição dos canos
-
-
-Resolver com:
-Inteira?
-Heurística?
+BRKGA para permutar P(m,T)
